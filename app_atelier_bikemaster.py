@@ -10,12 +10,12 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.graphics.shapes import Drawing, Rect, String
 
-# --- CONFIGURATION ET CHEMINS DE STOCKAGE ---
+# --- ARCHITECTURE DU SYSTEME DE FICHIERS ---
 os.makedirs("Archives_Clients", exist_ok=True)
 REGISTRE_PATH = "registre_devis.csv"
 DATA_CSV_PATH = "universal_bikes_master_database_fr.csv"
 
-# --- MATRIX GÉOMÉTRIQUE GLOBALE (400 LIGNES AUTOMATIQUES) ---
+# --- COMPILATION DE LA BASE DE DONNÉES UNIVERSELLE (400 LIGNES) ---
 if not os.path.exists(DATA_CSV_PATH):
     marques = ["Trek", "Specialized", "Canyon", "Giant", "Scott", "Cannondale", "Orbea", "Cube", "Pinarello", "BMC",
                "Winspace", "Quickpro", "Elves", "Pardus", "Look", "Origine", "Lapierre", "Adris", "Gir's", "Superior"]
@@ -38,7 +38,6 @@ if not os.path.exists(DATA_CSV_PATH):
                     "Reach_mm": specs["base_reach"] + (i * 15), "Stack_mm": specs["base_stack"] + (i * 20),
                     "Head_Angle_deg": 71.5 if cat == "Cyclo-cross" else (66.0 if "VTT" in cat else 72.0),
                     "Chainstay_mm": 425 if cat == "Cyclo-cross" else 435, "BB_Drop_mm": 62,
-                    "Est_Electrique": False, "Moteur_Marque_Modele": "N/A", "Batterie_Wh": 0, "Couple_Nm": 0,
                     "Prix_Base_HT": specs["prix"]
                 })
     pd.DataFrame(rows).to_csv(DATA_CSV_PATH, index=False, encoding='utf-8')
@@ -47,38 +46,41 @@ if not os.path.exists(DATA_CSV_PATH):
 def charger_base_universelle_reelle():
     return pd.read_csv(DATA_CSV_PATH, encoding='utf-8')
 
-# --- RECOMMANDATIONS TECHNIQUES ---
+# --- LOGIQUE POSTURALE ET TECHNIQUE ---
 def normaliser_nom_dossier(nom):
     return re.sub(r'[^A-Z0-9_]', '', nom.upper().replace(" ", "_").replace("-", "_"))
 
-def determiner_peripheriques(taille_pilote_cm, largeur_epaules_cm, categorie_velo):
-    if "vtt" in categorie_velo.lower():
-        largeur_cintre = 760 if taille_pilote_cm < 170 else (780 if taille_pilote_cm <= 180 else 800)
+def determiner_peripheriques(taille_cm, buste_cm, bras_cm, epaules_cm, categorie):
+    if "vtt" in categorie.lower():
+        largeur_cintre = 760 if taille_cm < 170 else (780 if taille_cm <= 180 else 800)
         potence = 40
     else:
-        largeur_cintre = largeur_epaules_cm * 10 if largeur_epaules_cm else (380 if taille_pilote_cm < 165 else (400 if taille_pilote_cm <= 178 else 420))
-        potence = 90 if taille_pilote_cm < 165 else (100 if taille_pilote_cm <= 178 else 110)
+        largeur_cintre = epaules_cm * 10 if epaules_cm else (400 if taille_cm <= 178 else 420)
+        # Prise en compte de la longueur du buste et des bras pour affiner la potence
+        index_buste_bras = (buste_cm + bras_cm) / 2 if (buste_cm and bras_cm) else 65
+        if index_buste_bras < 60: potence = 90
+        elif index_buste_bras <= 70: potence = 100
+        else: potence = 110
     return largeur_cintre, potence
 
-def inscrire_dans_registre(nom_client, h_cm, ej_cm, marque, modele, categorie, taille, total_ht, total_ttc, acompte, solde, chemin_pdf):
+def inscrire_dans_registre(nom, prenom, h, ej, buste, bras, epaules, marque, modele, cat, taille_c, total_ht, total_ttc, acompte, solde, chemin_pdf):
     nouvelle_ligne = {
-        "Date_Emission": datetime.now().strftime("%Y-%m-%d"), "Nom_Client": nom_client,
-        "Taille_Cycliste_cm": h_cm, "Entrejambe_Cycliste_cm": ej_cm,
-        "Marque": marque, "Modele": modele, "Categorie": categorie, "Taille_Cadre": taille,
-        "Total_HT_Euros": round(total_ht, 2), "Total_TTC_Euros": round(total_ttc, 2),
-        "Acompte_TTC_Euros": round(acompte, 2), "Solde_TTC_Euros": round(solde, 2),
-        "Fichier_PDF": chemin_pdf
+        "Date": datetime.now().strftime("%Y-%m-%d"), "Nom": nom.upper(), "Prenom": prenom.capitalize(),
+        "Taille_cm": h, "Entrejambe_cm": ej, "Buste_cm": buste, "Bras_cm": bras, "Epaule_cm": epaules,
+        "Marque": marque, "Modele": modele, "Categorie": cat, "Taille_Cadre": taille_c,
+        "Total_HT": round(total_ht, 2), "Total_TTC": round(total_ttc, 2),
+        "Acompte_TTC": round(acompte, 2), "Solde_TTC": round(solde, 2), "Fichier_PDF": chemin_pdf
     }
-    df_ligne = pd.DataFrame([nouvelle_ligne])
+    df_line = pd.DataFrame([nouvelle_ligne])
     if os.path.exists(REGISTRE_PATH):
         try:
-            df_existant = pd.read_csv(REGISTRE_PATH, encoding='utf-8')
-            df_final = pd.concat([df_existant, df_ligne], ignore_index=True)
-        except: df_final = df_ligne
-    else: df_final = df_ligne
+            df_ext = pd.read_csv(REGISTRE_PATH, encoding='utf-8')
+            df_final = pd.concat([df_ext, df_line], ignore_index=True)
+        except: df_final = df_line
+    else: df_final = df_line
     df_final.to_csv(REGISTRE_PATH, index=False, encoding='utf-8')
 
-def generer_pdf_devis(chemin_complet, nom_client, adresse_client, velo_info, cintre, potence, prix_totaux, pct_acompte):
+def generer_pdf_devis(chemin_complet, client, velo_info, cintre, potence, prix, pct):
     doc = SimpleDocTemplate(chemin_complet, pagesize=letter, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)
     styles = getSampleStyleSheet()
     style_text = ParagraphStyle('Txt', fontSize=9, leading=13)
@@ -91,36 +93,34 @@ def generer_pdf_devis(chemin_complet, nom_client, adresse_client, velo_info, cin
         Table([[logo, Paragraph("<b>BIKE MASTER ATELIER</b><br/>75017 Paris", style_dr)]], colWidths=[150, 380]),
         Spacer(1, 15),
         Table([
-            [Paragraph("<b>Émetteur :</b> Bike Master", style_text), Paragraph(f"<b>Client :</b> {nom_client}<br/>{adresse_client}", style_text)],
+            [Paragraph("<b>Émetteur :</b> Bike Master Paris", style_text), Paragraph(f"<b>Client :</b> {client['nom']} {client['prenom']}<br/>{client['adresse']}<br/>Facturation : {client['adresse_fact']}", style_text)],
             [Paragraph(f"<b>Date :</b> {datetime.now().strftime('%d/%m/%Y')}", style_text), Paragraph("", style_text)]
-        ], colWidths=[260, 270]),
+        ], colWidths=[200, 330]),
         Spacer(1, 15),
-        Paragraph("<b>1. Spécifications Morphologiques & Cadre</b>", styles['Heading3']),
+        Paragraph("<b>1. Métrologie Anthropométrique & Cadre Retenu</b>", styles['Heading3']),
         Table([
             ["Marque", "Modèle", "Cadre Recommandé", "Largeur Cintre", "Longueur Potence", "Arbitrage"],
             [velo_info['Marque'], velo_info['Modele'], velo_info['Taille_Cadre'], f"{cintre} mm", f"{potence} mm", velo_info['Profil']]
         ], colWidths=[80, 100, 100, 80, 80, 90]),
         Spacer(1, 15),
-        Paragraph("<b>2. Détail Commercial Chiffré & Ventilation</b>", styles['Heading3'])
+        Paragraph("<b>2. Grille Commerciale & Échéancier</b>", styles['Heading3'])
     ]
     ts = TableStyle([('BACKGROUND', (0,0), (-1,0), colors.HexColor("#1A365D")), ('TEXTCOLOR', (0,0), (-1,0), colors.white), ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E0")), ('PADDING', (0,0), (-1,-1), 5), ('FONTSIZE', (0,0), (-1,-1), 8)])
     elements[-2].setStyle(ts)
     
-    lignes_facture = [
-        ["Désignation des Prestations", "Qté", "Montant HT"],
-        [f"Kit Châssis : {velo_info['Marque']} {velo_info['Modele']}", "1", f"{prix_totaux['velo']:.2f} €"],
-        ["Poste de Pilotage Sur-Mesure (Cintre + Potence)", "1", f"{(prix_totaux['cintre'] + prix_totaux['potence']):.2f} €"],
-        ["Forfait Main d'œuvre Expert & Posture", "1", f"{prix_totaux['mo']:.2f} €"]
+    lignes = [
+        ["Désignation des Équipements", "Qté", "Montant HT"],
+        [f"Kit Châssis : {velo_info['Marque']} {velo_info['Modele']}", "1", f"{prix['velo']:.2f} €"],
+        ["Poste de Pilotage Sur-Mesure", "1", f"{(prix['cintre'] + prix['potence']):.2f} €"],
+        ["Forfait Main d'œuvre Atelier & Posture", "1", f"{prix['mo']:.2f} €"]
     ]
-    if prix_totaux['remise'] > 0: lignes_facture.append([f"Remise Commerciale Appliquée", "1", f"-{prix_totaux['remise']:.2f} €"])
-    lignes_facture.extend([
-        ["", "Sous-Total Net HT :", f"{prix_totaux['net_ht']:.2f} €"],
-        ["", "TVA (20%) :", f"{prix_totaux['tva']:.2f} €"],
-        ["", "TOTAL DEVIS TTC :", f"{prix_totaux['ttc']:.2f} €"],
-        ["", f"ACOMPTE REQUIS ({pct_acompte}%) :", f"{prix_totaux['acompte']:.2f} €"],
-        ["", "SOLDE À LA LIVRAISON :", f"{prix_totaux['solde']:.2f} €"]
+    if prix['remise'] > 0: lignes.append([f"Remise Commerciale Appliquée", "1", f"-{prix['remise']:.2f} €"])
+    lignes.extend([
+        ["", "Sous-Total Net HT :", f"{prix['net_ht']:.2f} €"], ["", "TVA (20%) :", f"{prix['tva']:.2f} €"],
+        ["", "TOTAL COMMANDÉ TTC :", f"{prix['ttc']:.2f} €"], ["", f"ACOMPTE REQUIS ({pct}%) :", f"{prix['acompte']:.2f} €"],
+        ["", "SOLDE À LA LIVRAISON :", f"{prix['solde']:.2f} €"]
     ])
-    tf = Table(lignes_facture, colWidths=[280, 130, 120])
+    tf = Table(lignes, colWidths=[300, 130, 100])
     tf.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#2B6CB0")), ('TEXTCOLOR', (0,0), (-1,0), colors.white),
         ('GRID', (0,0), (-1,-6), 0.5, colors.HexColor("#E2E8F0")), ('ALIGN', (2,0), (2,-1), 'RIGHT'),
@@ -131,37 +131,34 @@ def generer_pdf_devis(chemin_complet, nom_client, adresse_client, velo_info, cin
     elements.append(tf)
     doc.build(elements)
 
-# --- LOCK DE SÉCURITÉ MAGASIN ---
+# --- PROTECTION DES SERVEURS MAGASIN ---
 if "authenticated" not in st.session_state: st.session_state.authenticated = False
+if "client_data" not in st.session_state: st.session_state.client_data = {}
 
 if not st.session_state.authenticated:
     st.title("🔒 Accès Sécurisé - Atelier Bike Master")
-    password = st.text_input("Saisissez le code d'accès magasin :", type="password", key="sec_pass_v5")
+    password = st.text_input("Saisissez le code d'accès magasin :", type="password", key="pass_v6")
     if st.button("Se connecter"):
-        if password == "Atelier2026":
-            st.session_state.authenticated = True
-            st.rerun()
+        if password == "Atelier2026": st.session_state.authenticated = True; st.rerun()
         else: st.error("Code d'accès incorrect.")
 else:
     df_base = charger_base_universelle_reelle()
+    st.sidebar.title("🧭 Navigation Master")
     
-    # --- PROFILS TYPES CHARGÉS EN SIDEBAR SANS INTERFÉRENCE AVEC LES ONGLETS ---
-    st.sidebar.title("🔬 Profils de Test Rapide")
-    scenario = st.sidebar.selectbox("Charger un profil type :", ["Manuel (Saisie libre)", "Route Buste Long", "VTT Grandes Jambes", "Cyclo-cross Standard", "Gravel Standard"])
+    # SYSTEME DE NAVIGATION PAR RADIO SIDEBAR (FIN DES ONGLETS GELES)
+    page = st.sidebar.radio("Sélectionner un Espace :", ["👤 1. Fiche Profil Client", "🚴 2. Univers ROUTE", "🚴 3. Univers CYCLO-CROSS", "🚴 4. Univers GRAVEL", "🚴 5. Univers VTT", "📊 6. Registre & Télémétrie"])
     
-    def_nom, def_h, def_in, def_brand, def_cat = "Jean-Pierre Clavel", 175, 81, "Look", "Route Performance"
-    if scenario == "Route Buste Long": def_nom, def_h, def_in, def_brand, def_cat = "Lucas Buste Long", 182, 82, "Look", "Route Performance"
-    elif scenario == "VTT Grandes Jambes": def_nom, def_h, def_in, def_brand, def_cat = "Sophie Grandes Jambes", 168, 83, "Trek", "VTT Trail"
-    elif scenario == "Cyclo-cross Standard": def_nom, def_h, def_in, def_brand, def_cat = "Antoine CX Race", 173, 82, "Canyon", "Cyclo-cross"
-    elif scenario == "Gravel Standard": def_nom, def_h, def_in, def_brand, def_cat = "Marc Gravel", 175, 84, "Origine", "Gravel"
-
-    # ONGLETS NATIVE CLEAN
-    onglet_config, onglet_suivi = st.tabs(["🚀 Configuration & Devis En Direct", "📊 Tableau de Bord & Historique"])
-
-    with onglet_config:
-        col_gauche, col_droite = st.columns(2)
+    # --- ESPACE 1 : FICHE PROFIL CLIENT ---
+    if page == "👤 1. Fiche Profil Client":
+        st.header("👤 Fiche Anthropométrique & Profil Client Central")
+        st.write("Renseignez ici l'identité et les constantes physiques complètes du pilote avant l'analyse par discipline.")
         
-        with col_gauche:
-            st.subheader("1. Fiche Client & Sélection Vélo")
-            nom = st.text_input("Nom Complet du Client", value=def_nom)
-            adresse = st.text_input("Adresse de Facturation", "45 Rue de la République, Lyon")
+        col1, col2 = st.columns(2)
+        with col1:
+            nom_c = st.text_input("Nom de famille", value=st.session_state.client_data.get("nom", "CLAVEL"))
+            prenom_c = st.text_input("Prénom", value=st.session_state.client_data.get("prenom", "Jean-Pierre"))
+            adresse_c = st.text_input("Adresse principale", value=st.session_state.client_data.get("adresse", "45 Rue de la République, Lyon"))
+            fact_c = st.text_input("Adresse de facturation", value=st.session_state.client_data.get("adresse_fact", "Identique à l'adresse principale"))
+        with col2:
+            h_c = st.slider("Taille Globale du corps (cm)", 140, 220, value=st.session_state.client_data.get("taille", 175))
+            ej_c = st.slider("Hauteur de l'Entrejambe (cm)", 60, 110, value=st.session_state.client_data.get("entrejambe", 81))
