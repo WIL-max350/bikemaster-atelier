@@ -10,12 +10,12 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.graphics.shapes import Drawing, Rect, String
 
-# --- ARCHITECTURE ET CONFIGURATION DES FICHIERS ---
+# --- CONFIGURATION INITIALE ---
 os.makedirs("Archives_Clients", exist_ok=True)
 REGISTRE_PATH = "registre_devis.csv"
 DATA_CSV_PATH = "universal_bikes_master_database_fr.csv"
 
-# --- COMPILATION INITIALE DE LA BASE COMPLÈTE EN CAS D'ABSENCE ---
+# --- GENERATION BASE SECOURS AUTOMATIQUE ---
 if not os.path.exists(DATA_CSV_PATH):
     marques = ["Trek", "Specialized", "Canyon", "Giant", "Scott", "Cannondale", "Orbea", "Cube", "Pinarello", "BMC",
                "Winspace", "Quickpro", "Elves", "Pardus", "Look", "Origine", "Lapierre", "Adris", "Gir's", "Superior"]
@@ -28,8 +28,7 @@ if not os.path.exists(DATA_CSV_PATH):
     for m in marques:
         for cat, specs in categories.items():
             mod_name = f"{m} Élite"
-            tailles = ["S", "M", "L", "XL"]
-            for i, t in enumerate(tailles):
+            for i, t in enumerate(["S", "M", "L", "XL"]):
                 rows.append({
                     "Marque": m, "Modele": mod_name, "Categorie": cat, "Taille_Cadre": t,
                     "Taille_Pilote_Min_cm": 155 + (i * 10), "Taille_Pilote_Max_cm": 168 + (i * 10),
@@ -44,12 +43,8 @@ if not os.path.exists(DATA_CSV_PATH):
 
 @st.cache_data
 def charger_base_universelle_reelle():
-    try:
-        return pd.read_csv(DATA_CSV_PATH, encoding='utf-8')
-    except Exception:
-        return pd.read_csv(DATA_CSV_PATH, encoding='latin-1')
+    return pd.read_csv(DATA_CSV_PATH, encoding='utf-8')
 
-# --- FONCTIONS LOGIQUES METIER ---
 def normaliser_nom_dossier(nom):
     return re.sub(r'[^A-Z0-9_]', '', nom.upper().replace(" ", "_").replace("-", "_"))
 
@@ -84,31 +79,28 @@ def generer_pdf_devis(chemin_complet, nom_client, adresse_client, velo_info, cin
     styles = getSampleStyleSheet()
     style_text = ParagraphStyle('Txt', fontSize=9, leading=13)
     style_dr = ParagraphStyle('Dr', parent=style_text, alignment=2)
-    
     logo = Drawing(120, 35)
     logo.add(Rect(0, 0, 120, 35, fillColor=colors.HexColor("#1A365D"), strokeColor=None))
     logo.add(String(12, 12, "BIKE MASTER", fontSize=13, fontName="Helvetica-Bold", fillColor=colors.white))
     
     elements = [
-        Table([[logo, Paragraph("<b>BIKE MASTER ATELIER</b><br/>75017 Paris", style_dr)]], colWidths=[150, 380]),
+        Table([[logo, Paragraph("<b>BIKE MASTER ATELIER</b><br/>75017 Paris", style_dr)]], colWidths=[150, 350]),
         Spacer(1, 15),
         Table([
             [Paragraph("<b>Émetteur :</b> Bike Master", style_text), Paragraph(f"<b>Client :</b> {nom_client}<br/>{adresse_client}", style_text)],
             [Paragraph(f"<b>Date :</b> {datetime.now().strftime('%d/%m/%Y')}", style_text), Paragraph("", style_text)]
-        ], colWidths=[265, 265]),
+        ], colWidths=[250, 250]),
         Spacer(1, 15),
-        Paragraph("<b>1. Spécifications du Poste de Pilotage Analysé (Résultat Automatique)</b>", styles['Heading3']),
+        Paragraph("<b>1. Spécifications du Poste de Pilotage Analysé</b>", styles['Heading3']),
         Table([
             ["Marque", "Modèle", "Cadre Prévu", "Cintre", "Potence", "Arbitrage Profil"],
             [velo_info['Marque'], velo_info['Modele'], velo_info['Taille_Cadre'], f"{cintre} mm", f"{potence} mm", velo_info['Profil']]
-        ], colWidths=[80, 100, 70, 70, 70, 140]),
+        ], colWidths=[80, 100, 70, 70, 70, 110]),
         Spacer(1, 15),
         Paragraph("<b>2. Détail Commercial Chiffré & Échéances</b>", styles['Heading3'])
     ]
-    
     ts = TableStyle([('BACKGROUND', (0,0), (-1,0), colors.HexColor("#1A365D")), ('TEXTCOLOR', (0,0), (-1,0), colors.white), ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E0")), ('PADDING', (0,0), (-1,-1), 5), ('FONTSIZE', (0,0), (-1,-1), 8)])
     elements[4].setStyle(ts)
-    elements[6].setStyle(ts)
     
     lignes_facture = [
         ["Désignation", "Qté", "Total HT"],
@@ -116,18 +108,13 @@ def generer_pdf_devis(chemin_complet, nom_client, adresse_client, velo_info, cin
         ["Composants Périphériques Élite (Cintre + Potence)", "1", f"{(prix_totaux['cintre'] + prix_totaux['potence']):.2f} €"],
         ["Main d'œuvre Atelier & Posture Professionnelle", "1", f"{prix_totaux['mo']:.2f} €"]
     ]
-    if prix_totaux['remise'] > 0:
-        lignes_facture.append([f"Remise Commerciale Appliquée", "1", f"-{prix_totaux['remise']:.2f} €"])
-        
+    if prix_totaux['remise'] > 0: lignes_facture.append([f"Remise Commerciale Appliquée", "1", f"-{prix_totaux['remise']:.2f} €"])
     lignes_facture.extend([
-        ["", "Total Net HT :", f"{prix_totaux['net_ht']:.2f} €"],
-        ["", "TVA (20%) :", f"{prix_totaux['tva']:.2f} €"],
-        ["", "Total TTC :", f"{prix_totaux['ttc']:.2f} €"],
-        ["", f"ACOMPTE REQUIS ({pct_acompte}%) :", f"{prix_totaux['acompte']:.2f} €"],
+        ["", "Total Net HT :", f"{prix_totaux['net_ht']:.2f} €"], ["", "TVA (20%) :", f"{prix_totaux['tva']:.2f} €"],
+        ["", "Total TTC :", f"{prix_totaux['ttc']:.2f} €"], ["", f"ACOMPTE REQUIS ({pct_acompte}%) :", f"{prix_totaux['acompte']:.2f} €"],
         ["", "SOLDE À LA LIVRAISON :", f"{prix_totaux['solde']:.2f} €"]
     ])
-    
-    tf = Table(lignes_facture, colWidths=[280, 130, 120])
+    tf = Table(lignes_facture, colWidths=[280, 120, 100])
     tf.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#2B6CB0")), ('TEXTCOLOR', (0,0), (-1,0), colors.white),
         ('GRID', (0,0), (-1,-6), 0.5, colors.HexColor("#E2E8F0")), ('ALIGN', (2,0), (2,-1), 'RIGHT'),
@@ -136,44 +123,43 @@ def generer_pdf_devis(chemin_complet, nom_client, adresse_client, velo_info, cin
         ('TEXTCOLOR', (1,-1), (2,-1), colors.HexColor("#2B6CB0"))
     ]))
     elements.append(tf)
-    
-    elements.append(Spacer(1, 15))
-    t_sig = Table([
-        ["Mentions de commande & Acompte :", "Validation Client :"],
-        [f"Le montage débutera dès réception de l'acompte.\nLe solde sera dû le jour de l'ajustement final.", "Bon pour accord, Lu et approuvé\nDate et Signature :"]
-    ], colWidths=[265, 265])
-    t_sig.setStyle(TableStyle([('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'), ('FONTSIZE', (0,0), (-1,-1), 8), ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E0")), ('BOTTOMPADDING', (1,1), (1,1), 30)]))
-    elements.append(t_sig)
-    
     doc.build(elements)
 
-# --- SYSTEME DE VERIFICATION SECURISE SIMPLE ---
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
+# --- BLOC SECURITE CONNEXION ---
+if "authenticated" not in st.session_state: st.session_state.authenticated = False
 
 if not st.session_state.authenticated:
     st.title("🔒 Accès Sécurisé - Atelier Bike Master")
-    # Utilisation d'une clé (key) unique pour éviter le bug de duplication d'ID Streamlit
-    password = st.text_input("Saisissez le code d'accès magasin :", type="password", key="atelier_pass_input")
+    password = st.text_input("Saisissez le code d'accès magasin :", type="password", key="sec_pass_mag")
     if st.button("Se connecter"):
         if password == "Atelier2026":
             st.session_state.authenticated = True
             st.rerun()
-        else:
-            st.error("Code d'accès incorrect. Veuillez réessayer.")
+        else: st.error("Code d'accès incorrect.")
 else:
-    # --- CHARGEMENT DU WORKSPACE APRES CONNEXION ---
     df_base = charger_base_universelle_reelle()
-    st.sidebar.markdown(f"**🟢 Connecté :** Atelier Master")
     
+    # --- MENUS SCÉNARIOS DEPLACÉS RE-ROUTÉS SUR LE SIDEBAR SÉCURISÉ ---
+    st.sidebar.title("🔬 Profils de Test Rapide")
+    scenario = st.sidebar.selectbox("Charger un profil type :", ["Manuel (Saisie libre)", "Route Agressif (Buste Long)", "VTT Grandes Jambes", "Gravel Standard"])
+    
+    # Injection sécurisée sans destruction de l'arbre d'onglets
+    def_nom, def_h, def_in, def_brand, def_cat = "Jean-Pierre Clavel", 175, 81, "Look", "Route Performance"
+    if scenario == "Route Agressif (Buste Long)": def_nom, def_h, def_in, def_brand, def_cat = "Lucas Buste Long", 182, 82, "Look", "Route Performance"
+    elif scenario == "VTT Grandes Jambes": def_nom, def_h, def_in, def_brand, def_cat = "Sophie Grandes Jambes", 168, 83, "Trek", "VTT Trail"
+    elif scenario == "Gravel Standard": def_nom, def_h, def_in, def_brand, def_cat = "Marc Morpho Standard", 175, 84, "Origine", "Gravel"
+
+    # CRÉATION DES ONGLETS NATIVE CLEAN
     onglet_config, onglet_suivi = st.tabs(["🚀 Configuration & Devis", "📊 Tableau de Bord & Rotation des Stocks"])
 
     with onglet_config:
-        st.subheader("🔬 Scénarios Morphologiques Prédéfinis (Test Rapide)")
-        col_scen1, col_scen2, col_scen3 = st.columns(3)
-        
-        if col_scen1.button("💥 Profil Route Agressif (Buste Long)"):
-            st.session_state.client, st.session_state.h_val, st.session_state.in_val = "Lucas Buste Long", 182, 82
-            st.session_state.brand_val, st.session_state.cat_val = "Look", "Route Performance"
-        if col_scen2.button("⚡ Profil VTTAE Électrique (Jambes Longues)"):
-            st.session_state.client, st.session_state.h_val, st.session_state.in_val = "Sophie Grandes Jambes", 168, 83
+        col_gauche, col_droite = st.columns(2)
+        with col_gauche:
+            st.subheader("1. Fiche Client & Sélection Vélo")
+            nom = st.text_input("Nom du Client", value=def_nom)
+            adresse = st.text_input("Adresse de Facturation", "45 Rue de la République, Lyon")
+            marque = st.selectbox("Sélectionner la Marque", sorted(df_base["Marque"].unique()), index=sorted(df_base["Marque"].unique()).index(def_brand))
+            df_m = df_base[df_base["Marque"] == marque]
+            categorie = st.selectbox("Catégorie de Pratique", sorted(df_m["Categorie"].unique()), index=sorted(df_m["Categorie"].unique()).index(def_cat))
+            df_mc = df_m[df_m["Categorie"] == categorie]
+            modele = df_mc["Modele"].iloc if not df_mc.empty else "Modèle Spécifique"
