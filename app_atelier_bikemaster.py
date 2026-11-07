@@ -58,7 +58,7 @@ def check_password():
         st.session_state.authenticated = False
     if not st.session_state.authenticated:
         st.title("🔒 Accès Sécurisé - Atelier Bike Master")
-        password = st.text_input("Saisissez le code d'accès magasin :", type="password", key="sec_pass_mag_v3")
+        password = st.text_input("Saisissez le code d'accès magasin :", type="password", key="sec_pass_mag_final")
         if st.button("Se connecter"):
             if password == "Atelier2026":
                 st.session_state.authenticated = True
@@ -108,24 +108,26 @@ def generer_pdf_devis(chemin_complet, nom_client, adresse_client, velo_info, cin
     logo.add(String(12, 12, "BIKE MASTER", fontSize=13, fontName="Helvetica-Bold", fillColor=colors.white))
     
     elements = [
-        Table([[logo, Paragraph("<b>BIKE MASTER ATELIER</b><br/>75017 Paris", style_dr)]], colWidths=),
+        Table([[logo, Paragraph("<b>BIKE MASTER ATELIER</b><br/>75017 Paris", style_dr)]], colWidths=[150, 370]),
         Spacer(1, 15),
         Table([
             [Paragraph("<b>Émetteur :</b> Bike Master", style_text), Paragraph(f"<b>Client :</b> {nom_client}<br/>{adresse_client}", style_text)],
             [Paragraph(f"<b>Date :</b> {datetime.now().strftime('%d/%m/%Y')}", style_text), Paragraph("", style_text)]
-        ], colWidths=),
+        ], colWidths=[260, 260]),
         Spacer(1, 15),
         Paragraph("<b>1. Spécifications du Poste de Pilotage Analysé (Résultat Automatique)</b>", styles['Heading3']),
         Table([
             ["Marque", "Modèle", "Cadre Prévu", "Cintre", "Potence", "Arbitrage Profil"],
             [velo_info['Marque'], velo_info['Modele'], velo_info['Taille_Cadre'], f"{cintre} mm", f"{potence} mm", velo_info['Profil']]
-        ], colWidths=),
+        ], colWidths=[80, 100, 70, 70, 70, 130]),
         Spacer(1, 15),
         Paragraph("<b>2. Détail Commercial Chiffré & Échéances</b>", styles['Heading3'])
     ]
     
     ts = TableStyle([('BACKGROUND', (0,0), (-1,0), colors.HexColor("#1A365D")), ('TEXTCOLOR', (0,0), (-1,0), colors.white), ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E0")), ('PADDING', (0,0), (-1,-1), 5), ('FONTSIZE', (0,0), (-1,-1), 8)])
-    elements.setStyle(ts)
+    elements[0].setStyle(ts)
+    elements[2].setStyle(ts)
+    elements[5].setStyle(ts)
     
     lignes_facture = [
         ["Désignation", "Qté", "Total HT"],
@@ -144,7 +146,7 @@ def generer_pdf_devis(chemin_complet, nom_client, adresse_client, velo_info, cin
         ["", "SOLDE À LA LIVRAISON :", f"{prix_totaux['solde']:.2f} €"]
     ])
     
-    tf = Table(lignes_facture, colWidths=)
+    tf = Table(lignes_facture, colWidths=[280, 140, 100])
     tf.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#2B6CB0")), ('TEXTCOLOR', (0,0), (-1,0), colors.white),
         ('GRID', (0,0), (-1,-6), 0.5, colors.HexColor("#E2E8F0")), ('ALIGN', (2,0), (2,-1), 'RIGHT'),
@@ -158,7 +160,7 @@ def generer_pdf_devis(chemin_complet, nom_client, adresse_client, velo_info, cin
     t_sig = Table([
         ["Mentions de commande & Acompte :", "Validation Client :"],
         [f"Le montage débutera dès réception de l'acompte.\nLe solde sera dû le jour de l'ajustement final.", "Bon pour accord, Lu et approuvé\nDate et Signature :"]
-    ], colWidths=)
+    ], colWidths=[260, 260])
     t_sig.setStyle(TableStyle([('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'), ('FONTSIZE', (0,0), (-1,-1), 8), ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E0")), ('BOTTOMPADDING', (1,1), (1,1), 30)]))
     elements.append(t_sig)
     
@@ -173,4 +175,3 @@ if check_password():
     
     def_nom, def_h, def_in, def_brand, def_cat = "Jean-Pierre Clavel", 175, 81, "Look", "Route Performance"
     if scenario == "Route Buste Long": def_nom, def_h, def_in, def_brand, def_cat = "Lucas Buste Long", 182, 82, "Look", "Route Performance"
-    elif scenario == "VTT Grandes Jambes": def_nom, def_h, def_in, def_brand, def_cat = "Sophie Grandes Jambes", 168, 83, "Trek", "VTT Trail"
