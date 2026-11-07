@@ -101,7 +101,7 @@ def generer_pdf_devis(chemin_complet, client, velo_info, cintre, potence, prix, 
         Table([
             ["Marque", "Modèle", "Cadre Recommandé", "Largeur Cintre", "Longueur Potence", "Arbitrage"],
             [velo_info['Marque'], velo_info['Modele'], velo_info['Taille_Cadre'], f"{cintre} mm", f"{potence} mm", velo_info['Profil']]
-        ], colWidths=[80, 100, 100, 80, 80, 90]),
+        ], colWidths=[80, 100, 90, 80, 80, 100]),
         Spacer(1, 15),
         Paragraph("<b>2. Grille Commerciale & Échéancier</b>", styles['Heading3'])
     ]
@@ -131,8 +131,10 @@ def generer_pdf_devis(chemin_complet, client, velo_info, cintre, potence, prix, 
     elements.append(tf)
     doc.build(elements)
 
-# --- INITIALISATION DE LA MEMOIRE PERMANENTE ---
+# --- CONFIGURATION DE LA SECURITE ---
 if "authenticated" not in st.session_state: st.session_state.authenticated = False
+
+# Initialisation de la mémoire globale
 if "nom" not in st.session_state: st.session_state.nom = "CLAVEL"
 if "prenom" not in st.session_state: st.session_state.prenom = "Jean-Pierre"
 if "adresse" not in st.session_state: st.session_state.adresse = "45 Rue de la République, Lyon"
@@ -143,11 +145,11 @@ if "buste" not in st.session_state: st.session_state.buste = 62
 if "bras" not in st.session_state: st.session_state.bras = 64
 if "epaules" not in st.session_state: st.session_state.epaules = 40
 if "poids" not in st.session_state: st.session_state.poids = 75
-if "pointure" not in st.session_state: st.session_state.pointure = 27.5
+if "pointure" not in st.session_state: st.session_state.pointure = 27.0
 
 if not st.session_state.authenticated:
     st.title("🔒 Accès Sécurisé - Atelier Bike Master")
-    password = st.text_input("Saisissez le code d'accès magasin :", type="password", key="pass_v10_complete")
+    password = st.text_input("Saisissez le code d'accès magasin :", type="password", key="pass_v11_fixed")
     if st.button("Se connecter"):
         if password == "Atelier2026": st.session_state.authenticated = True; st.rerun()
         else: st.error("Code d'accès incorrect.")
@@ -164,9 +166,6 @@ else:
         "📊 6. Registre & Télémétrie"
     ])
     
-    # --- ESPACE 1 : FICHE PROFIL CLIENT (AVEC TOUTES LES NOUVELLES PLAGES) ---
+    # --- ESPACE 1 : FICHE PROFIL CLIENT (AVEC SAISIE MANUELLE CLAVIER) ---
     if page == "👤 1. Fiche Profil Client":
         st.header("👤 Fiche Anthropométrique & Profil Client Central")
-        st.write("Saisissez ici les données d'identité et l'ensemble des 7 mensurations physiques requises.")
-        
-        col1, col2 = st.columns(2)
