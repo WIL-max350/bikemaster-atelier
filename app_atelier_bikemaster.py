@@ -15,7 +15,7 @@ os.makedirs("Archives_Clients", exist_ok=True)
 REGISTRE_PATH = "registre_devis.csv"
 DATA_CSV_PATH = "universal_bikes_master_database_fr.csv"
 
-# --- COMPILATION DE LA BASE DE DONNÉES UNIVERSELLE (400 LIGNES) ---
+# --- SYSTEME DE GENERATION AUTOMATIQUE DU CATALOGUE (400 LIGNES) ---
 if not os.path.exists(DATA_CSV_PATH):
     marques = ["Trek", "Specialized", "Canyon", "Giant", "Scott", "Cannondale", "Orbea", "Cube", "Pinarello", "BMC",
                "Winspace", "Quickpro", "Elves", "Pardus", "Look", "Origine", "Lapierre", "Adris", "Gir's", "Superior"]
@@ -32,8 +32,8 @@ if not os.path.exists(DATA_CSV_PATH):
             for i, t in enumerate(["S", "M", "L", "XL"]):
                 rows.append({
                     "Marque": m, "Modele": mod_name, "Categorie": cat, "Taille_Cadre": t,
-                    "Taille_Pilote_Min_cm": 155 + (i * 10), "Taille_Pilote_Max_cm": 168 + (i * 10),
-                    "Entrejambe_Min_cm": 70 + (i * 6), "Entrejambe_Max_cm": 78 + (i * 6),
+                    "Taille_Pilote_Min_cm": 150 + (i * 12), "Taille_Pilote_Max_cm": 168 + (i * 12),
+                    "Entrejambe_Min_cm": 68 + (i * 6), "Entrejambe_Max_cm": 78 + (i * 6),
                     "Top_Tube_mm": 520 + (i * 20), "Standover_mm": specs["base_standover"] + (i * 25),
                     "Reach_mm": specs["base_reach"] + (i * 15), "Stack_mm": specs["base_stack"] + (i * 20),
                     "Head_Angle_deg": 71.5 if cat == "Cyclo-cross" else (66.0 if "VTT" in cat else 72.0),
@@ -46,7 +46,7 @@ if not os.path.exists(DATA_CSV_PATH):
 def charger_base_universelle_reelle():
     return pd.read_csv(DATA_CSV_PATH, encoding='utf-8')
 
-# --- LOGIQUE POSTURALE ET TECHNIQUE ---
+# --- LOGIQUE POSTURALE ET ETUDE TECHNIQUE ---
 def normaliser_nom_dossier(nom):
     return re.sub(r'[^A-Z0-9_]', '', nom.upper().replace(" ", "_").replace("-", "_"))
 
@@ -56,7 +56,6 @@ def determiner_peripheriques(taille_cm, buste_cm, bras_cm, epaules_cm, categorie
         potence = 40
     else:
         largeur_cintre = epaules_cm * 10 if epaules_cm else (400 if taille_cm <= 178 else 420)
-        # Prise en compte de la longueur du buste et des bras pour affiner la potence
         index_buste_bras = (buste_cm + bras_cm) / 2 if (buste_cm and bras_cm) else 65
         if index_buste_bras < 60: potence = 90
         elif index_buste_bras <= 70: potence = 100
@@ -90,18 +89,18 @@ def generer_pdf_devis(chemin_complet, client, velo_info, cintre, potence, prix, 
     logo.add(String(12, 12, "BIKE MASTER", fontSize=13, fontName="Helvetica-Bold", fillColor=colors.white))
     
     elements = [
-        Table([[logo, Paragraph("<b>BIKE MASTER ATELIER</b><br/>75017 Paris", style_dr)]], colWidths=[150, 380]),
+        Table([[logo, Paragraph("<b>BIKE MASTER ATELIER</b><br/>75017 Paris", style_dr)]], colWidths=[150, 370]),
         Spacer(1, 15),
         Table([
             [Paragraph("<b>Émetteur :</b> Bike Master Paris", style_text), Paragraph(f"<b>Client :</b> {client['nom']} {client['prenom']}<br/>{client['adresse']}<br/>Facturation : {client['adresse_fact']}", style_text)],
             [Paragraph(f"<b>Date :</b> {datetime.now().strftime('%d/%m/%Y')}", style_text), Paragraph("", style_text)]
-        ], colWidths=[200, 330]),
+        ], colWidths=[260, 260]),
         Spacer(1, 15),
         Paragraph("<b>1. Métrologie Anthropométrique & Cadre Retenu</b>", styles['Heading3']),
         Table([
             ["Marque", "Modèle", "Cadre Recommandé", "Largeur Cintre", "Longueur Potence", "Arbitrage"],
             [velo_info['Marque'], velo_info['Modele'], velo_info['Taille_Cadre'], f"{cintre} mm", f"{potence} mm", velo_info['Profil']]
-        ], colWidths=[80, 100, 100, 80, 80, 90]),
+        ], colWidths=[80, 100, 90, 80, 80, 90]),
         Spacer(1, 15),
         Paragraph("<b>2. Grille Commerciale & Échéancier</b>", styles['Heading3'])
     ]
@@ -120,7 +119,7 @@ def generer_pdf_devis(chemin_complet, client, velo_info, cintre, potence, prix, 
         ["", "TOTAL COMMANDÉ TTC :", f"{prix['ttc']:.2f} €"], ["", f"ACOMPTE REQUIS ({pct}%) :", f"{prix['acompte']:.2f} €"],
         ["", "SOLDE À LA LIVRAISON :", f"{prix['solde']:.2f} €"]
     ])
-    tf = Table(lignes, colWidths=[300, 130, 100])
+    tf = Table(lignes, colWidths=[300, 120, 100])
     tf.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#2B6CB0")), ('TEXTCOLOR', (0,0), (-1,0), colors.white),
         ('GRID', (0,0), (-1,-6), 0.5, colors.HexColor("#E2E8F0")), ('ALIGN', (2,0), (2,-1), 'RIGHT'),
@@ -131,27 +130,33 @@ def generer_pdf_devis(chemin_complet, client, velo_info, cintre, potence, prix, 
     elements.append(tf)
     doc.build(elements)
 
-# --- PROTECTION DES SERVEURS MAGASIN ---
+# --- BLOC ACCÈS SÉCURISÉ ---
 if "authenticated" not in st.session_state: st.session_state.authenticated = False
 if "client_data" not in st.session_state: st.session_state.client_data = {}
 
 if not st.session_state.authenticated:
     st.title("🔒 Accès Sécurisé - Atelier Bike Master")
-    password = st.text_input("Saisissez le code d'accès magasin :", type="password", key="pass_v6")
+    password = st.text_input("Saisissez le code d'accès magasin :", type="password", key="pass_v7_final")
     if st.button("Se connecter"):
         if password == "Atelier2026": st.session_state.authenticated = True; st.rerun()
         else: st.error("Code d'accès incorrect.")
 else:
     df_base = charger_base_universelle_reelle()
-    st.sidebar.title("🧭 Navigation Master")
+    st.sidebar.title("🧭 Navigation Magasin")
     
-    # SYSTEME DE NAVIGATION PAR RADIO SIDEBAR (FIN DES ONGLETS GELES)
-    page = st.sidebar.radio("Sélectionner un Espace :", ["👤 1. Fiche Profil Client", "🚴 2. Univers ROUTE", "🚴 3. Univers CYCLO-CROSS", "🚴 4. Univers GRAVEL", "🚴 5. Univers VTT", "📊 6. Registre & Télémétrie"])
+    page = st.sidebar.radio("Sélectionner un Espace :", [
+        "👤 1. Fiche Profil Client", 
+        "🚴 2. Univers ROUTE", 
+        "🚴 3. Univers CYCLO-CROSS", 
+        "🚴 4. Univers GRAVEL", 
+        "🚴 5. Univers VTT", 
+        "📊 6. Registre & Télémétrie"
+    ])
     
     # --- ESPACE 1 : FICHE PROFIL CLIENT ---
     if page == "👤 1. Fiche Profil Client":
         st.header("👤 Fiche Anthropométrique & Profil Client Central")
-        st.write("Renseignez ici l'identité et les constantes physiques complètes du pilote avant l'analyse par discipline.")
+        st.write("Saisissez ici l'identité complète et les mensurations précises pour piloter automatiquement le système.")
         
         col1, col2 = st.columns(2)
         with col1:
@@ -162,3 +167,4 @@ else:
         with col2:
             h_c = st.slider("Taille Globale du corps (cm)", 140, 220, value=st.session_state.client_data.get("taille", 175))
             ej_c = st.slider("Hauteur de l'Entrejambe (cm)", 60, 110, value=st.session_state.client_data.get("entrejambe", 81))
+            bust_c = st.slider("Longueur du Buste (cm)", 40, 90, value=st.session_state.client_data.get("buste", 62))
