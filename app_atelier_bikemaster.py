@@ -89,18 +89,18 @@ def generer_pdf_devis(chemin_complet, client, velo_info, cintre, potence, prix, 
     logo.add(String(12, 12, "BIKE MASTER", fontSize=13, fontName="Helvetica-Bold", fillColor=colors.white))
     
     elements = [
-        Table([[logo, Paragraph("<b>BIKE MASTER ATELIER</b><br/>75017 Paris", style_dr)]], colWidths=[150, 370]),
+        Table([[logo, Paragraph("<b>BIKE MASTER ATELIER</b><br/>75017 Paris", style_dr)]], colWidths=),
         Spacer(1, 15),
         Table([
             [Paragraph("<b>Émetteur :</b> Bike Master Paris", style_text), Paragraph(f"<b>Client :</b> {client['nom']} {client['prenom']}<br/>{client['adresse']}<br/>Facturation : {client['adresse_fact']}", style_text)],
             [Paragraph(f"<b>Date :</b> {datetime.now().strftime('%d/%m/%Y')}", style_text), Paragraph("", style_text)]
-        ], colWidths=[260, 260]),
+        ], colWidths=),
         Spacer(1, 15),
         Paragraph("<b>1. Métrologie Anthropométrique & Cadre Retenu</b>", styles['Heading3']),
         Table([
             ["Marque", "Modèle", "Cadre Recommandé", "Largeur Cintre", "Longueur Potence", "Arbitrage"],
             [velo_info['Marque'], velo_info['Modele'], velo_info['Taille_Cadre'], f"{cintre} mm", f"{potence} mm", velo_info['Profil']]
-        ], colWidths=[80, 100, 90, 80, 80, 90]),
+        ], colWidths=),
         Spacer(1, 15),
         Paragraph("<b>2. Grille Commerciale & Échéancier</b>", styles['Heading3'])
     ]
@@ -119,7 +119,7 @@ def generer_pdf_devis(chemin_complet, client, velo_info, cintre, potence, prix, 
         ["", "TOTAL COMMANDÉ TTC :", f"{prix['ttc']:.2f} €"], ["", f"ACOMPTE REQUIS ({pct}%) :", f"{prix['acompte']:.2f} €"],
         ["", "SOLDE À LA LIVRAISON :", f"{prix['solde']:.2f} €"]
     ])
-    tf = Table(lignes, colWidths=[300, 120, 100])
+    tf = Table(lignes, colWidths=)
     tf.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#2B6CB0")), ('TEXTCOLOR', (0,0), (-1,0), colors.white),
         ('GRID', (0,0), (-1,-6), 0.5, colors.HexColor("#E2E8F0")), ('ALIGN', (2,0), (2,-1), 'RIGHT'),
@@ -130,13 +130,23 @@ def generer_pdf_devis(chemin_complet, client, velo_info, cintre, potence, prix, 
     elements.append(tf)
     doc.build(elements)
 
-# --- BLOC ACCÈS SÉCURISÉ ---
+# --- INITIALISATION ET LOCK SECURITE ---
 if "authenticated" not in st.session_state: st.session_state.authenticated = False
-if "client_data" not in st.session_state: st.session_state.client_data = {}
+
+# Initialisation forcée de la mémoire permanente pour la fiche client
+if "nom" not in st.session_state: st.session_state.nom = "CLAVEL"
+if "prenom" not in st.session_state: st.session_state.prenom = "Jean-Pierre"
+if "adresse" not in st.session_state: st.session_state.adresse = "45 Rue de la République, Lyon"
+if "adresse_fact" not in st.session_state: st.session_state.adresse_fact = "Identique à l'adresse principale"
+if "taille" not in st.session_state: st.session_state.taille = 175
+if "entrejambe" not in st.session_state: st.session_state.entrejambe = 81
+if "buste" not in st.session_state: st.session_state.buste = 62
+if "bras" not in st.session_state: st.session_state.bras = 64
+if "epaules" not in st.session_state: st.session_state.epaules = 40
 
 if not st.session_state.authenticated:
     st.title("🔒 Accès Sécurisé - Atelier Bike Master")
-    password = st.text_input("Saisissez le code d'accès magasin :", type="password", key="pass_v7_final")
+    password = st.text_input("Saisissez le code d'accès magasin :", type="password", key="pass_v8_stable")
     if st.button("Se connecter"):
         if password == "Atelier2026": st.session_state.authenticated = True; st.rerun()
         else: st.error("Code d'accès incorrect.")
@@ -153,18 +163,13 @@ else:
         "📊 6. Registre & Télémétrie"
     ])
     
-    # --- ESPACE 1 : FICHE PROFIL CLIENT ---
+    # --- ESPACE 1 : FICHE PROFIL CLIENT (SAUVEGARDE EN TEMPS RÉEL) ---
     if page == "👤 1. Fiche Profil Client":
         st.header("👤 Fiche Anthropométrique & Profil Client Central")
-        st.write("Saisissez ici l'identité complète et les mensurations précises pour piloter automatiquement le système.")
+        st.write("Saisissez ici l'identité complète et les mensurations. Tout changement est sauvegardé automatiquement.")
         
         col1, col2 = st.columns(2)
         with col1:
-            nom_c = st.text_input("Nom de famille", value=st.session_state.client_data.get("nom", "CLAVEL"))
-            prenom_c = st.text_input("Prénom", value=st.session_state.client_data.get("prenom", "Jean-Pierre"))
-            adresse_c = st.text_input("Adresse principale", value=st.session_state.client_data.get("adresse", "45 Rue de la République, Lyon"))
-            fact_c = st.text_input("Adresse de facturation", value=st.session_state.client_data.get("adresse_fact", "Identique à l'adresse principale"))
-        with col2:
-            h_c = st.slider("Taille Globale du corps (cm)", 140, 220, value=st.session_state.client_data.get("taille", 175))
-            ej_c = st.slider("Hauteur de l'Entrejambe (cm)", 60, 110, value=st.session_state.client_data.get("entrejambe", 81))
-            bust_c = st.slider("Longueur du Buste (cm)", 40, 90, value=st.session_state.client_data.get("buste", 62))
+            st.session_state.nom = st.text_input("Nom de famille", value=st.session_state.nom).upper()
+            st.session_state.prenom = st.text_input("Prénom", value=st.session_state.prenom).capitalize()
+            st.session_state.adresse = st.text_input("Adresse principale", value=st.session_state.adresse)
