@@ -1,0 +1,17 @@
+Marque,Modele,Categorie,Taille_Cadre,Taille_Pilote_Min_cm,Taille_Pilote_Max_cm,Entrejambe_Min_cm,Entrejambe_Max_cm,Top_Tube_mm,Standover_mm,Reach_mm,Stack_mm,Est_Electrique,Moteur_Marque_Modele,Batterie_Wh,Couple_Nm
+Trek,Madone SLR Gen 8,Route Performance,54,168,174,79,82,541,745,386,541,False,N/A,0,0
+Trek,Madone SLR Gen 8,Route Performance,56,174,180,82,85,558,767,392,563,False,N/A,0,0
+Trek,Domane+ SLR (VAE),Route E-Bike,54,168,174,79,82,543,750,377,561,True,TQ-HPR50,360,50
+Trek,Domane+ SLR (VAE),Route E-Bike,56,174,180,82,85,559,771,381,582,True,TQ-HPR50,360,50
+Specialized,Tarmac SL8,Route Performance,54,170,175,78,83,541,755,384,541,False,N/A,0,0
+Specialized,Tarmac SL8,Route Performance,56,175,180,81,86,563,775,395,565,False,N/A,0,0
+Specialized,Turbo Levo SL (VAE),VTT VAE Trail,M,173,178,76,82,603,770,430,608,True,Specialized SL 1.2,320,50
+Specialized,Turbo Levo SL (VAE),VTT VAE Trail,L,180,188,81,88,629,782,455,626,True,Specialized SL 1.2,320,50
+Canyon,Ultimate CFR,Route Performance,M,178,184,81,86,556,778,391,560,False,N/A,0,0
+Canyon,Ultimate CFR,Route Performance,L,184,190,84,90,574,801,401,579,False,N/A,0,0
+Canyon,Spectral:ON (VAE),VTT VAE Enduro,M,175,183,80,85,611,765,460,622,True,Shimano EP801,720,85
+Canyon,Spectral:ON (VAE),VTT VAE Enduro,L,183,192,84,91,636,780,485,640,True,Shimano EP801,720,85
+Giant,TCR Advanced SL,Route Performance,M,171,181,76,82,550,762,388,545,False,N/A,0,0
+Giant,TCR Advanced SL,Route Performance,ML,177,187,79,85,565,781,393,562,False,N/A,0,0
+Giant,Revolt Advanced,Gravel,M,174,181,77,84,560,755,385,570,False,N/A,0,0
+Giant,Revolt Advanced,Gravel,ML,180,189,80,88,575,774,391,588,False,N/A,0,0
