@@ -89,18 +89,18 @@ def generer_pdf_devis(chemin_complet, client, velo_info, cintre, potence, prix, 
     logo.add(String(12, 12, "BIKE MASTER", fontSize=13, fontName="Helvetica-Bold", fillColor=colors.white))
     
     elements = [
-        Table([[logo, Paragraph("<b>BIKE MASTER ATELIER</b><br/>75017 Paris", style_dr)]], colWidths=),
+        Table([[logo, Paragraph("<b>BIKE MASTER ATELIER</b><br/>75017 Paris", style_dr)]], colWidths=[150, 380]),
         Spacer(1, 15),
         Table([
             [Paragraph("<b>Émetteur :</b> Bike Master Paris", style_text), Paragraph(f"<b>Client :</b> {client['nom']} {client['prenom']}<br/>{client['adresse']}<br/>Facturation : {client['adresse_fact']}", style_text)],
             [Paragraph(f"<b>Date :</b> {datetime.now().strftime('%d/%m/%Y')}", style_text), Paragraph("", style_text)]
-        ], colWidths=),
+        ], colWidths=[200, 330]),
         Spacer(1, 15),
         Paragraph("<b>1. Métrologie Anthropométrique & Cadre Retenu</b>", styles['Heading3']),
         Table([
             ["Marque", "Modèle", "Cadre Recommandé", "Largeur Cintre", "Longueur Potence", "Arbitrage"],
             [velo_info['Marque'], velo_info['Modele'], velo_info['Taille_Cadre'], f"{cintre} mm", f"{potence} mm", velo_info['Profil']]
-        ], colWidths=),
+        ], colWidths=[80, 100, 90, 80, 80, 100]),
         Spacer(1, 15),
         Paragraph("<b>2. Grille Commerciale & Échéancier</b>", styles['Heading3'])
     ]
@@ -119,7 +119,7 @@ def generer_pdf_devis(chemin_complet, client, velo_info, cintre, potence, prix, 
         ["", "TOTAL COMMANDÉ TTC :", f"{prix['ttc']:.2f} €"], ["", f"ACOMPTE REQUIS ({pct}%) :", f"{prix['acompte']:.2f} €"],
         ["", "SOLDE À LA LIVRAISON :", f"{prix['solde']:.2f} €"]
     ])
-    tf = Table(lignes, colWidths=)
+    tf = Table(lignes, colWidths=[280, 130, 120])
     tf.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#2B6CB0")), ('TEXTCOLOR', (0,0), (-1,0), colors.white),
         ('GRID', (0,0), (-1,-6), 0.5, colors.HexColor("#E2E8F0")), ('ALIGN', (2,0), (2,-1), 'RIGHT'),
@@ -133,7 +133,6 @@ def generer_pdf_devis(chemin_complet, client, velo_info, cintre, potence, prix, 
 # --- INITIALISATION ET LOCK SECURITE ---
 if "authenticated" not in st.session_state: st.session_state.authenticated = False
 
-# Initialisation forcée de la mémoire permanente pour la fiche client
 if "nom" not in st.session_state: st.session_state.nom = "CLAVEL"
 if "prenom" not in st.session_state: st.session_state.prenom = "Jean-Pierre"
 if "adresse" not in st.session_state: st.session_state.adresse = "45 Rue de la République, Lyon"
@@ -146,7 +145,7 @@ if "epaules" not in st.session_state: st.session_state.epaules = 40
 
 if not st.session_state.authenticated:
     st.title("🔒 Accès Sécurisé - Atelier Bike Master")
-    password = st.text_input("Saisissez le code d'accès magasin :", type="password", key="pass_v8_stable")
+    password = st.text_input("Saisissez le code d'accès magasin :", type="password", key="pass_v9_ultimate")
     if st.button("Se connecter"):
         if password == "Atelier2026": st.session_state.authenticated = True; st.rerun()
         else: st.error("Code d'accès incorrect.")
@@ -163,7 +162,7 @@ else:
         "📊 6. Registre & Télémétrie"
     ])
     
-    # --- ESPACE 1 : FICHE PROFIL CLIENT (SAUVEGARDE EN TEMPS RÉEL) ---
+    # --- ESPACE 1 : FICHE PROFIL CLIENT ---
     if page == "👤 1. Fiche Profil Client":
         st.header("👤 Fiche Anthropométrique & Profil Client Central")
         st.write("Saisissez ici l'identité complète et les mensurations. Tout changement est sauvegardé automatiquement.")
