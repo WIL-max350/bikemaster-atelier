@@ -15,7 +15,7 @@ os.makedirs("Archives_Clients", exist_ok=True)
 REGISTRE_PATH = "registre_devis.csv"
 DATA_CSV_PATH = "universal_bikes_master_database_fr.csv"
 
-# --- GENERATION AUTOMATIQUE DU CATALOGUE (400 LIGNES) ---
+# --- SYSTEME DE GENERATION AUTOMATIQUE DU CATALOGUE (400 LIGNES) ---
 if not os.path.exists(DATA_CSV_PATH):
     marques = ["Trek", "Specialized", "Canyon", "Giant", "Scott", "Cannondale", "Orbea", "Cube", "Pinarello", "BMC",
                "Winspace", "Quickpro", "Elves", "Pardus", "Look", "Origine", "Lapierre", "Adris", "Gir's", "Superior"]
@@ -46,7 +46,7 @@ if not os.path.exists(DATA_CSV_PATH):
 def charger_base_universelle_reelle():
     return pd.read_csv(DATA_CSV_PATH, encoding='utf-8')
 
-# --- LOGIQUE POSTURALE ET METROLOGIE ---
+# --- LOGIQUE POSTURALE ET ETUDE TECHNIQUE ---
 def normaliser_nom_dossier(nom):
     return re.sub(r'[^A-Z0-9_]', '', nom.upper().replace(" ", "_").replace("-", "_"))
 
@@ -77,7 +77,7 @@ def inscrire_dans_registre(nom, prenom, h, ej, buste, bras, epaules, poids, poin
             df_ext = pd.read_csv(REGISTRE_PATH, encoding='utf-8')
             df_final = pd.concat([df_ext, df_line], ignore_index=True)
         except: df_final = df_line
-    else: df_final = df_line
+    else: df_line = df_line; df_final = df_line
     df_final.to_csv(REGISTRE_PATH, index=False, encoding='utf-8')
 
 def generer_pdf_devis(chemin_complet, client, velo_info, cintre, potence, prix, pct):
@@ -90,18 +90,18 @@ def generer_pdf_devis(chemin_complet, client, velo_info, cintre, potence, prix, 
     logo.add(String(12, 12, "BIKE MASTER", fontSize=13, fontName="Helvetica-Bold", fillColor=colors.white))
     
     elements = [
-        Table([[logo, Paragraph("<b>BIKE MASTER ATELIER</b><br/>75017 Paris", style_dr)]], colWidths=[200, 330]),
+        Table([[logo, Paragraph("<b>BIKE MASTER ATELIER</b><br/>75017 Paris", style_dr)]], colWidths=[150, 380]),
         Spacer(1, 15),
         Table([
             [Paragraph("<b>Émetteur :</b> Bike Master Paris", style_text), Paragraph(f"<b>Client :</b> {client['nom']} {client['prenom']}<br/>{client['adresse']}<br/>Facturation : {client['adresse_fact']}", style_text)],
             [Paragraph(f"<b>Date :</b> {datetime.now().strftime('%d/%m/%Y')}", style_text), Paragraph(f"<b>Mensurations :</b> {client['taille']}cm | EJ: {client['entrejambe']}cm | Poids: {client['poids']}kg | Pied: {client['pointure']}cm", style_text)]
-        ], colWidths=[200, 330]),
+        ], colWidths=[150, 380]),
         Spacer(1, 15),
         Paragraph("<b>1. Métrologie Anthropométrique & Cadre Retenu</b>", styles['Heading3']),
         Table([
             ["Marque", "Modèle", "Cadre Recommandé", "Largeur Cintre", "Longueur Potence", "Arbitrage"],
             [velo_info['Marque'], velo_info['Modele'], velo_info['Taille_Cadre'], f"{cintre} mm", f"{potence} mm", velo_info['Profil']]
-        ], colWidths=[80, 100, 90, 80, 90, 90]),
+        ], colWidths=[80, 100, 100, 70, 80, 100]),
         Spacer(1, 15),
         Paragraph("<b>2. Grille Commerciale & Échéancier</b>", styles['Heading3'])
     ]
@@ -120,7 +120,7 @@ def generer_pdf_devis(chemin_complet, client, velo_info, cintre, potence, prix, 
         ["", "TOTAL COMMANDÉ TTC :", f"{prix['ttc']:.2f} €"], ["", f"ACOMPTE REQUIS ({pct}%) :", f"{prix['acompte']:.2f} €"],
         ["", "SOLDE À LA LIVRAISON :", f"{prix['solde']:.2f} €"]
     ])
-    tf = Table(lignes, colWidths=[230, 150, 150])
+    tf = Table(lignes, colWidths=[280, 130, 120])
     tf.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#2B6CB0")), ('TEXTCOLOR', (0,0), (-1,0), colors.white),
         ('GRID', (0,0), (-1,-6), 0.5, colors.HexColor("#E2E8F0")), ('ALIGN', (2,0), (2,-1), 'RIGHT'),
@@ -131,12 +131,24 @@ def generer_pdf_devis(chemin_complet, client, velo_info, cintre, potence, prix, 
     elements.append(tf)
     doc.build(elements)
 
-# --- BLOC ACCÈS SÉCURISÉ ---
+# --- LOCK DE SÉCURITÉ ---
 if "authenticated" not in st.session_state: st.session_state.authenticated = False
+
+if "s_nom" not in st.session_state: st.session_state["s_nom"] = "CLAVEL"
+if "s_prenom" not in st.session_state: st.session_state["s_prenom"] = "Jean-Pierre"
+if "s_adresse" not in st.session_state: st.session_state["s_adresse"] = "45 Rue de la République, Lyon"
+if "s_adresse_fact" not in st.session_state: st.session_state["s_adresse_fact"] = "Identique à l'adresse principale"
+if "s_taille" not in st.session_state: st.session_state["s_taille"] = 175
+if "s_entrejambe" not in st.session_state: st.session_state["s_entrejambe"] = 81
+if "s_buste" not in st.session_state: st.session_state["s_buste"] = 62
+if "s_bras" not in st.session_state: st.session_state["s_bras"] = 64
+if "s_epaules" not in st.session_state: st.session_state["s_epaules"] = 40
+if "s_poids" not in st.session_state: st.session_state["s_poids"] = 75
+if "s_pointure" not in st.session_state: st.session_state["s_pointure"] = 27.0
 
 if not st.session_state.authenticated:
     st.title("🔒 Accès Sécurisé - Atelier Bike Master")
-    password = st.text_input("Saisissez le code d'accès magasin :", type="password", key="pass_v12_prod")
+    password = st.text_input("Saisissez le code d'accès magasin :", type="password", key="pass_v12_final")
     if st.button("Se connecter"):
         if password == "Atelier2026": st.session_state.authenticated = True; st.rerun()
         else: st.error("Code d'accès incorrect.")
@@ -153,21 +165,6 @@ else:
         "📊 6. Registre & Télémétrie"
     ])
     
-    # --- ESPACE 1 : FICHE PROFIL CLIENT (SAISIE NUMERIQUE PAR CASIER BLANC SANS GLISSER) ---
+    # --- ESPACE 1 : FICHE PROFIL CLIENT ---
     if page == "👤 1. Fiche Profil Client":
         st.header("👤 Fiche Anthropométrique & Profil Client Central")
-        st.write("Saisissez les coordonnées et les 7 mensurations. Les données se gravent automatiquement en mémoire vive.")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            st.subheader("📝 Coordonnées")
-            nom_in = st.text_input("Nom de famille", value=st.session_state.get("s_nom", "CLAVEL")).upper()
-            st.session_state["s_nom"] = nom_in
-            prenom_in = st.text_input("Prénom", value=st.session_state.get("s_prenom", "Jean-Pierre")).capitalize()
-            st.session_state["s_prenom"] = prenom_in
-            adr_in = st.text_input("Adresse de résidence", value=st.session_state.get("s_adresse", "45 Rue de la République, Lyon"))
-            st.session_state["s_adresse"] = adr_in
-            fact_in = st.text_input("Adresse de facturation", value=st.session_state.get("s_adresse_fact", "Identique à l'adresse principale"))
-            st.session_state["s_adresse_fact"] = fact_in
-            
-        with col2:
