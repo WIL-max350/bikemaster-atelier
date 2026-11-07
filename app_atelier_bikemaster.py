@@ -62,10 +62,11 @@ def determiner_peripheriques(taille_cm, buste_cm, bras_cm, epaules_cm, categorie
         else: potence = 110
     return largeur_cintre, potence
 
-def inscrire_dans_registre(nom, prenom, h, ej, buste, bras, epaules, marque, modele, cat, taille_c, total_ht, total_ttc, acompte, solde, chemin_pdf):
+def inscrire_dans_registre(nom, prenom, h, ej, buste, bras, epaules, poids, pointure, marque, modele, cat, taille_c, total_ht, total_ttc, acompte, solde, chemin_pdf):
     nouvelle_ligne = {
         "Date": datetime.now().strftime("%Y-%m-%d"), "Nom": nom.upper(), "Prenom": prenom.capitalize(),
         "Taille_cm": h, "Entrejambe_cm": ej, "Buste_cm": buste, "Bras_cm": bras, "Epaule_cm": epaules,
+        "Poids_kg": poids, "Pointure_cm": pointure,
         "Marque": marque, "Modele": modele, "Categorie": cat, "Taille_Cadre": taille_c,
         "Total_HT": round(total_ht, 2), "Total_TTC": round(total_ttc, 2),
         "Acompte_TTC": round(acompte, 2), "Solde_TTC": round(solde, 2), "Fichier_PDF": chemin_pdf
@@ -93,14 +94,14 @@ def generer_pdf_devis(chemin_complet, client, velo_info, cintre, potence, prix, 
         Spacer(1, 15),
         Table([
             [Paragraph("<b>Émetteur :</b> Bike Master Paris", style_text), Paragraph(f"<b>Client :</b> {client['nom']} {client['prenom']}<br/>{client['adresse']}<br/>Facturation : {client['adresse_fact']}", style_text)],
-            [Paragraph(f"<b>Date :</b> {datetime.now().strftime('%d/%m/%Y')}", style_text), Paragraph("", style_text)]
+            [Paragraph(f"<b>Date :</b> {datetime.now().strftime('%d/%m/%Y')}", style_text), Paragraph(f"<b>Mensurations :</b> {client['taille']}cm | EJ: {client['entrejambe']}cm | Poids: {client['poids']}kg | Pied: {client['pointure']}cm", style_text)]
         ], colWidths=[200, 330]),
         Spacer(1, 15),
         Paragraph("<b>1. Métrologie Anthropométrique & Cadre Retenu</b>", styles['Heading3']),
         Table([
             ["Marque", "Modèle", "Cadre Recommandé", "Largeur Cintre", "Longueur Potence", "Arbitrage"],
             [velo_info['Marque'], velo_info['Modele'], velo_info['Taille_Cadre'], f"{cintre} mm", f"{potence} mm", velo_info['Profil']]
-        ], colWidths=[80, 100, 90, 80, 80, 100]),
+        ], colWidths=[80, 100, 100, 80, 80, 90]),
         Spacer(1, 15),
         Paragraph("<b>2. Grille Commerciale & Échéancier</b>", styles['Heading3'])
     ]
@@ -130,9 +131,8 @@ def generer_pdf_devis(chemin_complet, client, velo_info, cintre, potence, prix, 
     elements.append(tf)
     doc.build(elements)
 
-# --- INITIALISATION ET LOCK SECURITE ---
+# --- INITIALISATION DE LA MEMOIRE PERMANENTE ---
 if "authenticated" not in st.session_state: st.session_state.authenticated = False
-
 if "nom" not in st.session_state: st.session_state.nom = "CLAVEL"
 if "prenom" not in st.session_state: st.session_state.prenom = "Jean-Pierre"
 if "adresse" not in st.session_state: st.session_state.adresse = "45 Rue de la République, Lyon"
@@ -142,10 +142,12 @@ if "entrejambe" not in st.session_state: st.session_state.entrejambe = 81
 if "buste" not in st.session_state: st.session_state.buste = 62
 if "bras" not in st.session_state: st.session_state.bras = 64
 if "epaules" not in st.session_state: st.session_state.epaules = 40
+if "poids" not in st.session_state: st.session_state.poids = 75
+if "pointure" not in st.session_state: st.session_state.pointure = 27.5
 
 if not st.session_state.authenticated:
     st.title("🔒 Accès Sécurisé - Atelier Bike Master")
-    password = st.text_input("Saisissez le code d'accès magasin :", type="password", key="pass_v9_ultimate")
+    password = st.text_input("Saisissez le code d'accès magasin :", type="password", key="pass_v10_complete")
     if st.button("Se connecter"):
         if password == "Atelier2026": st.session_state.authenticated = True; st.rerun()
         else: st.error("Code d'accès incorrect.")
@@ -162,13 +164,9 @@ else:
         "📊 6. Registre & Télémétrie"
     ])
     
-    # --- ESPACE 1 : FICHE PROFIL CLIENT ---
+    # --- ESPACE 1 : FICHE PROFIL CLIENT (AVEC TOUTES LES NOUVELLES PLAGES) ---
     if page == "👤 1. Fiche Profil Client":
         st.header("👤 Fiche Anthropométrique & Profil Client Central")
-        st.write("Saisissez ici l'identité complète et les mensurations. Tout changement est sauvegardé automatiquement.")
+        st.write("Saisissez ici les données d'identité et l'ensemble des 7 mensurations physiques requises.")
         
         col1, col2 = st.columns(2)
-        with col1:
-            st.session_state.nom = st.text_input("Nom de famille", value=st.session_state.nom).upper()
-            st.session_state.prenom = st.text_input("Prénom", value=st.session_state.prenom).capitalize()
-            st.session_state.adresse = st.text_input("Adresse principale", value=st.session_state.adresse)
